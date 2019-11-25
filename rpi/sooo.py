@@ -20,9 +20,9 @@ def sendInfo(dataType, success, dustValue):
 
     requiredToOpen = response['requiredToOpen'] # 창문을 열어야 하는지 업데이트
 
-def request(url):
-    response = urllib.request.urlopen(url).read().decode('utf-8')
-    return response
+# def request(url):
+#     response = urllib.request.urlopen(url).read().decode('utf-8')
+#     return response
 
 # 서버에서 주기적으로 값을 받아오는 스케쥴러 실행
 sendInfo(0, 1, dustValue)

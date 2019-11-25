@@ -41,7 +41,8 @@ def inputFromAPP(command):
     with open("commandContext", "w") as file: # commandContext에 command를 저장
         file.write(str(command) + "\n")
     
-    makeLog(inputFromAPP, "i", "command: " + command, "YES") # 로그 기록
+    makeLog(inputFromAPP, "i", "command: " + str(command), "YES") # 로그 기록
+    return '23rwf'
 
 ''' command를 반환 '''
 def getCommand():
@@ -110,6 +111,11 @@ def requestFromRPi():
     data = {'weatherInfo': getWeather(), 'airInfo': getAirInfo(), 'command': getCommand(), 'requiredToOpen': getRequiredToOpen()}
     return jsonify(data)
 
+def test():
+    print("test")
+    threading.Timer(1, test).start()
+
 # 아래는 수정하지 말 것
 if __name__ == '__main__':
+    test()
     app.run()

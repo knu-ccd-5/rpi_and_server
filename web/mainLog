@@ -21,3 +21,4 @@
 {'YEAR': 2019, 'MONTH': 11, 'DAY': 24, 'HOUR': 0, 'MINUTE': 35, 'SECOND': 42, 'type': 'i', 'value': 'motorValue: 345346 Success: FAIL', 'isSuccess': 'YES'}
 {'YEAR': 2019, 'MONTH': 11, 'DAY': 24, 'HOUR': 0, 'MINUTE': 36, 'SECOND': 13, 'type': 'i', 'value': 'motorValue: 999292 Success: FAIL', 'isSuccess': 'YES'}
 {'YEAR': 2019, 'MONTH': 11, 'DAY': 24, 'HOUR': 0, 'MINUTE': 36, 'SECOND': 22, 'type': 'i', 'value': 'motorValue: 992 Success: SUCCESS', 'isSuccess': 'YES'}
+{'YEAR': 2019, 'MONTH': 11, 'DAY': 25, 'HOUR': 13, 'MINUTE': 32, 'SECOND': 24, 'dataType': 'i', 'value': 'command: 0', 'isSuccess': 'YES'}

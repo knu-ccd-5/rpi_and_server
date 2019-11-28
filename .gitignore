@@ -1,3 +1,8 @@
 .vscode/arduino.json
 .vscode/c_cpp_properties.json
 arduino-airquality/arduino-airquality
+rpi/uno/.vscode/arduino.json
+rpi/uno/.vscode/c_cpp_properties.json
+.vscode/settings.json
+arduino-airquality/arduino-airquality
+arduino-airquality/arduino-airquality

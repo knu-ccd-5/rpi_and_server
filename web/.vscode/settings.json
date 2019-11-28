@@ -29,5 +29,8 @@
         "env.bak{,/**}",
         "venv.bak{,/**}",
         ".vscode{,/**}"
-    ]
+    ],
+    "python.pythonPath": "C:\\Users\\John\\AppData\\Local\\Programs\\Python\\Python37\\python.exe",
+    "appService.defaultWebAppToDeploy": "/subscriptions/713eed1d-cb9c-4e23-8b73-bd5ec79ad8fe/resourceGroups/ccd/providers/Microsoft.Web/sites/soooServer",
+    "appService.deploySubpath": ""
 }

@@ -36,6 +36,8 @@ def rpiSync(rpiIp, dustFactor):
     with codecs.open("rpiDust", "w", "utf-8") as file:
         file.write(dustFactor)
 
+    ''' 날씨 크롤링 '''
+    crawling()
     ''' 라즈베리파이에 먼지 값 전달 '''
     return getWeather()
 
@@ -111,7 +113,7 @@ def crawling():
         file.write(str(dust[4].text) + '\n') # 미세먼지
         file.write(str(dust[5].text)) # 초미세먼지
     print("DEBUG: writing success")
-    threading.Timer(3, crawling).start() # 3초마다 한 번 실행하도록 예약
+    # threading.Timer(3, crawling).start() # 3초마다 한 번 실행하도록 예약
     return weatherTable, tempTable, dust, rainTable
 
 

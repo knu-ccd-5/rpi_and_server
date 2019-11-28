@@ -12,7 +12,6 @@ import urllib.request
 import socket
 import codecs
 
-
 app = Flask(__name__)
 
 @app.route("/")
@@ -22,8 +21,6 @@ def hello():
 @app.route("/aaa")
 def hello2():
     return "Hello Flask, on Azure App Service for "
-
-
 
 
 ''' 라즈베리파이 '''
@@ -91,6 +88,10 @@ def nowDate():
     # return {'YEAR': now.year, 'MONTH': now.month, 'DAY': now.day, 'HOUR': now.hour, 'MINUTE': now.minute,
     #         'SECOND': now.second}
 
+@app.route('/ip', methods=['GET'])
+def name():
+    return request.environ.get('HTTP_X_REAL_IP', request.remote_addr) #return jsonify({'ip': request.remote_addr}), 200 #return jsonify({'ip': request.environ['REMOTE_ADDR']}), 200
+
 
 ''' 날씨를 크롤링하는 함수'''
 def crawling():
@@ -112,10 +113,6 @@ def crawling():
     print("DEBUG: writing success")
     threading.Timer(3, crawling).start() # 3초마다 한 번 실행하도록 예약
     return weatherTable, tempTable, dust, rainTable
-
-@app.route('/ip', methods=['GET'])
-def name():
-    return request.environ.get('HTTP_X_REAL_IP', request.remote_addr) #return jsonify({'ip': request.remote_addr}), 200 #return jsonify({'ip': request.environ['REMOTE_ADDR']}), 200
 
 
 if __name__ == '__main__':

@@ -25,12 +25,12 @@ def hello2():
 
 ''' 라즈베리파이 '''
 ''' 라즈베리파이의 주기적인 sync '''
-@app.route("/rpi/sync/<rpiIp>/<dustFactor>")
-def rpiSync(rpiIp, dustFactor):
+@app.route("/rpi/sync/<dustFactor>")
+def rpiSync(dustFactor):
     ''' 연결 기록하기 '''
     with codecs.open("isRpiConnected", "w", "utf-8") as file:
-        file.write("1" + '\n') # 연결되었다고 기록
-        file.write(rpiIp) #라즈베리파이의 ip 기록
+        file.write("1") # 연결되었다고 기록
+        #file.write(rpiIp) #라즈베리파이의 ip 기록
     
     ''' 라즈베리가 측정한 먼지 척도를 기록 '''
     with codecs.open("rpiDust", "w", "utf-8") as file:
@@ -117,9 +117,9 @@ def crawling():
     return weatherTable, tempTable, dust, rainTable
 
 
-if __name__ == '__main__':
-    crawling()
-    # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # s.connect(('8.8.8.8', 1))
-    # print(s.getsockname()[0])
-    app.run()
+# if __name__ == '__main__':
+#     crawling()
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     s.connect(('8.8.8.8', 1))
+#     print(s.getsockname()[0])
+#     app.run()

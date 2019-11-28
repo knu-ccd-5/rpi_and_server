@@ -83,8 +83,6 @@ For further information, please refer to https://pinout.xyz/
  * LED : Digital 12
 '''
 
-
-
 import RPi.GPIO as GPIO
 import spidev, time
 import serial
@@ -92,13 +90,13 @@ import urllib.request
 import json
 import time
 import socket
-
-
+import threading
 
 spi = spidev.SpiDev()
 spi.open(0, 0)
 measurePin = 0 # 측정 핀이 MCP3008에서 CH0
 ledPower = 14 # led 전원공급 핀: GPIO 14
+servoPin = 15 # 서보모터 핀
 
 # samplingTime = 280
 # deltaTime = 40
@@ -111,8 +109,11 @@ voMeasured = 0
 calcVoltage = 0
 dustDensity = 0
 
+dustFactor = 0
+
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(ledPower, GPIO.OUT)
+GPIO.setup(servoPin, GPIO.OUT)
 GPIO.output(ledPower, False)
 
 def analog_read(channel):
@@ -123,71 +124,81 @@ def analog_read(channel):
 
 def sync(url, dustFactor):
     ''' 라즈베리파이의 현재 ip 얻기 '''
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(('8.8.8.8', 1))
-    rpiIp = s.getsockname()[0] # 라즈베리파이의 ip
+    # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    # s.connect(('8.8.8.8', 1))
+    # rpiIp = s.getsockname()[0] # 라즈베리파이의 ip
 
-    url = url + "/rpi/sync/" + rpiIp + "/" + str(dustFactor)
-    print("DEBUG: url: " + url + '\n' + "DEBUG: ip: " + rpiIp)
+    #url = url + "/rpi/sync/" + rpiIp + "/" + str(dustFactor)
+    url = url + "/rpi/sync/" + str(dustFactor)
+    print("DEBUG: url: " + url)
     response = urllib.request.urlopen(url).read().decode('utf-8')
-
 
     response = json.loads(response) # 결과를 딕셔너리 타입으로 변환
     print(response)
     #print(response)
+    threading.Timer(3, sync, dustFactor).start() # 주기적으로 실행하도록 예약
     return response
 
-
+windowIsOpen = True
 dustFactor = 0
 requiredToClose = False
 command = 0
-url = "http://127.0.0.1:5000"
+url = "http://soooserver.azurewebsites.net"
+
+p = GPIO.PWM(servoPin, 50)
+p.start(0)
+response = sync(url, dustFactor)
 
 # 계속 실행
 while True:
     #time.sleep(3) # 3초간 쉬기
+    time.sleep(1)
 
     GPIO.output(ledPower, False) # LED 전원 끄기
     time.sleep(samplingTime)
 
     voMeasured = analog_read(measurePin) # read the dust value
-
+    dustFactor = voMeasured
+    print(dustFactor)
     time.sleep(deltaTime)
     GPIO.output(ledPower, True)
     time.sleep(sleepTime)
+    #calcVoltage = voMeasured * (3.3 / 1024)
+    #dustDensity = (0.17 * calcVoltage - 0.1) * 1000
+    #print(voMeasured)
+    #print("Reading = %f\tVoltage = %f\tdustFactor = %f" % (voMeasured, calcVoltage, dustFactor))
+    # 서버와 sync
 
-    calcVoltage = voMeasured * (3.3 / 1024)
+    print(response)
 
-    dustDensity = (0.17 * calcVoltage - 0.1) * 1000
-
-    print(voMeasured)
-
-
-    dustFactor = voMeasured
-    print("Reading = %f\tVoltage = %f\tdustFactor = %f" % (voMeasured, calcVoltage, dustFactor))
-    time.sleep(1)
+    '''창문을 열어야 하는지 판단 '''
+    dustDensityFromServer = int(response['dust'][:-3])
+    mDustDensityFromServer = int(response['mdust'][:-3])
 
 
-    print(dustFactor)
-    if dustFactor > 500:
+    if (dustFactor > 500) or (dustDensityFromServer > 100) or (mDustDensityFromServer > 35):
         requiredToClose = True
     else:
         requiredToClose = False
 
-    '''창문을 열어야 하는지 판단 '''
+
+    if requiredToClose == True:
+        # if windowIsOpen == True: # 창문이 열려있을 때
+        GPIO.setup(servoPin, GPIO.OUT)
+        p.ChangeDutyCycle(7.5)
+        GPIO.setup(servoPin, GPIO.IN)
+        print("모터 구동")
+        windowIsOpen = False # 창문이 닫혔다고 설정
+    else:
+        # if windowIsOpen == False: # 창문이 닫혀있을 떄
+        GPIO.setup(servoPin, GPIO.OUT)
+        p.ChangeDutyCycle(2.5)
+        GPIO.setup(servoPin, GPIO.IN)
+        windowIsOpen = True # 창문이 열려있다고 설정
+    time.sleep(0.5)
+
     print("DEBUG: checking 'requiredToOpen'")
     print("DEBUG: requiredToOpen: %d" % requiredToClose)
-    if requiredToClose == True:
-        #모터 구동
-        # sendInfo(1, 1, dustValue)
-        pass
-
-    # 서버와 sync
-    #response = sync(url, dustFactor)
-    #print(response)
-
-
-
 
 
 

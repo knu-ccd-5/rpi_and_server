@@ -7,3 +7,10 @@ rpi/uno/.vscode/c_cpp_properties.json
 arduino-airquality/arduino-airquality
 arduino-airquality/arduino-airquality
 arduino-airquality/arduino-airquality
+web/dustConditionToClose
+web/isRpiConnected
+web/mainLog
+web/rpiDust
+web/weatherData
+web/windowCommand
+.vscode/launch.json

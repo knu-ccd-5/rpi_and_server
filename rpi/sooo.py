@@ -92,7 +92,8 @@ import socket
 import threading
 
 measurePin = 0 # 측정 핀이 MCP3008에서 CH0
-ledPower = 14 # led 전원공급 핀: GPIO 14
+ledPower = 4 # led 전원공급 핀: GPIO 14
+servoPin = 17 # 서보모터 연결 핀: GPIO 17
 
 ''' constants from .ino '''
 # samplingTime = 280
@@ -124,10 +125,14 @@ windowCommand = 0 # 창문 명령. 2 : 열기, 3: 닫기
 ''' 아날로그 input 세팅 '''
 spi = spidev.SpiDev()
 spi.open(0, 0)
+#spi.max_speed_hz = 1350000
 
 ''' GPIO 핀 모드 세팅 '''
 GPIO.setmode(GPIO.BCM) # BCM GPIO 핀 배열을 사용하도록 지정
 GPIO.setup(ledPower, GPIO.OUT) # 미세먼지 센서의 LED 핀 설정
+GPIO.setup(servoPin, GPIO.OUT)
+p = GPIO.PWM(servoPin, 50) # 서보모터 설정
+p.start(0)
 
 ''' 아날로그 input 함수 '''
 def analog_read(channel):
@@ -172,35 +177,54 @@ def sync():
 
 
 ''' 메인실행 '''
-sync() # 싱크는 딱 한번만 실행
+#sync() # 싱크는 딱 한번만 실행
 
 # 계속 실행
-while True:
-   ''' dustFactor 측정'''
-   GPIO.output(ledPower, False) # LED 전원 끄기
-   time.sleep(samplingTime)
 
-   dustFactor = analog_read(0) # read the dust value
+try:
+   while True:
+      ''' dustFactor 측정'''
+      GPIO.output(ledPower, False) # LED 전원 끄기
+      time.sleep(samplingTime)
 
-   time.sleep(deltaTime)
-   GPIO.output(ledPower, True)
-   time.sleep(sleepTime)
-   print("dustFactor: %f" % dustFactor)
+      dustFactor = analog_read(0) # read the dust value
 
-   ''' 창문을 열어야 하는지 판단하기 '''
-   if(dustFactor > 500) or (dustDensityFromServer > dustConditionFromServer) or (mDustDensityFromServer > mdustConditionFromServer):
-      requiredToClose = True
-   else:
-      requiredToClose = False
-   
+      time.sleep(deltaTime)
+      GPIO.output(ledPower, True)
+      time.sleep(sleepTime)
+      print("dustFactor: %f" % dustFactor)
 
-   ''' 창문을 진짜 열까? '''
-   if (requiredToClose == True) and (windowIsOpen == True):
-      print("창문 닫기")
-      windowIsOpen = False
-   elif (requiredToClose == False) and (windowIsOpen == False):
-      print("창문 열기")
-      windowIsOpen = True
+      ''' 창문을 열어야 하는지 판단하기 '''
+      if(dustFactor > 500) or (dustDensityFromServer > dustConditionFromServer) or (mDustDensityFromServer > mdustConditionFromServer):
+         requiredToClose = True
+      else:
+         requiredToClose = False
+      
 
-   print("현재 상태: 창문을 닫아야 하나: %d 창문이 열려있나: %d" % (int(requiredToClose), int(windowIsOpen)))
-   time.sleep(1)
+      ''' 창문을 진짜 열까? '''
+      if (requiredToClose == True) and (windowIsOpen == True):
+         print("창문 닫기")
+         GPIO.setup(servoPin, GPIO.OUT)
+         p.ChangeDutyCycle(5) # -90도
+         GPIO.setup(servoPin, GPIO.IN)
+         windowIsOpen = False
+      elif (requiredToClose == False) and (windowIsOpen == False):
+         print("창문 열기")
+         GPIO.setup(servoPin, GPIO.OUT)
+         p.ChangeDutyCycle(10) # +90도
+         GPIO.setup(servoPin, GPIO.IN)
+         windowIsOpen = True
+
+
+      print("현재 상태: 창문을 닫아야 하나: %d 창문이 열려있나: %d" % (int(requiredToClose), int(windowIsOpen)))
+      time.sleep(1)
+
+except KeyboardInterrupt: # If Ctrl + C is pressed, exit cleanly
+   print("Keyboard Interrupt")
+
+except:
+   print("some error")
+
+finally:
+   print("Clean Up GPIO PINs")
+   GPIO.cleanup()

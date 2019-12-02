@@ -14,3 +14,5 @@ web/rpiDust
 web/weatherData
 web/windowCommand
 .vscode/launch.json
+weatherData
+mainLog

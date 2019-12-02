@@ -199,7 +199,7 @@ def crawling():
         file.write(str(dust[5].text)) # 초미세먼지
     print("DEBUG: writing success")
     genLog("날씨 정보를 서버에서 크롤링했습니다.") # 로그 생성
-    threading.Timer(10, crawling).start() # 3초마다 한 번 실행하도록 예약
+    threading.Timer(1800, crawling).start() # 1800초마다 한 번 실행하도록 예약
     return weatherTable, tempTable, dust, rainTable
 
 

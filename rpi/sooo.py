@@ -84,7 +84,6 @@ For further information, please refer to https://pinout.xyz/
 '''
 
 import RPi.GPIO as GPIO
-import spidev
 import urllib.request
 import json
 import serial
@@ -94,21 +93,7 @@ import threading
 
 PORT = '/dev/ttyACM0' # default COM PORT of Aruino Uno
 baudrate = 9600
-measurePin = 0 # 측정 핀이 MCP3008에서 CH0
-ledPower = 4 # led 전원공급 핀: GPIO 14
 servoPin = 17 # 서보모터 연결 핀: GPIO 17
-
-''' constants from .ino '''
-# samplingTime = 280
-# deltaTime = 40
-# sleepTime = 9680
-''' to python '''
-samplingTime = 0.00028
-deltaTime = 0.00004
-sleepTime = 0.00968
-#voMeasured = 0
-dustFactor = 0 # Dust Factor. 매우 중요!!
-#calcVoltage = 0
 
 
 ''' 서버 관련 변수들 '''
@@ -125,11 +110,6 @@ requiredToClose = False # 창문을 닫을 필요가 있는가?
 windowCommand = 0 # 창문 명령. 2 : 열기, 3: 닫기
 
 
-''' 아날로그 input 세팅 '''
-spi = spidev.SpiDev()
-spi.open(0, 0)
-#spi.max_speed_hz = 1350000
-
 ''' GPIO 핀 모드 세팅 '''
 GPIO.setmode(GPIO.BCM) # BCM GPIO 핀 배열을 사용하도록 지정
 GPIO.setup(ledPower, GPIO.OUT) # 미세먼지 센서의 LED 핀 설정
@@ -140,12 +120,6 @@ p.ChangeDutyCycle(5)
 
 ''' 시리얼 통신 세팅 '''
 ARD = serial.Serial(PORT, baudrate)
-
-''' 아날로그 input 함수 '''
-def analog_read(channel):
-    r = spi.xfer2([1, (8 + channel) << 4, 0])
-    adc_out = ((r[1]&3) << 8) + r[2]
-    return adc_out
 
 ''' 서버와의 연동 '''
 def sync():
@@ -184,11 +158,10 @@ def sync():
 
 
 
-''' 메인실행 '''
-sync() # 싱크는 딱 한번만 실행
+''' 첫 번째 싱크 실행 '''
+#sync() # 싱크는 딱 한번만 실행. sync()는 호출되면 threading으로 계속 실행된다.
 
-# 계속 실행
-
+''' loop '''
 try:
    while True:
       ''' dustFactor 받아오기 '''
@@ -200,8 +173,6 @@ try:
          print("dustSensor read error")
 
       ''' 창문을 닫아야 하는지 판단하기 '''
-      
-         
       if(dustFactor > 500) or (dustDensityFromServer > dustConditionFromServer) or (mDustDensityFromServer > mdustConditionFromServer):
          requiredToClose = True
       else:

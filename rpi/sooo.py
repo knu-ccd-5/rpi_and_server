@@ -87,10 +87,13 @@ import RPi.GPIO as GPIO
 import spidev
 import urllib.request
 import json
+import serial
 import time
 import socket
 import threading
 
+PORT = '/dev/ttyACM0' # default COM PORT of Aruino Uno
+baudrate = 9600
 measurePin = 0 # 측정 핀이 MCP3008에서 CH0
 ledPower = 4 # led 전원공급 핀: GPIO 14
 servoPin = 17 # 서보모터 연결 핀: GPIO 17
@@ -133,6 +136,10 @@ GPIO.setup(ledPower, GPIO.OUT) # 미세먼지 센서의 LED 핀 설정
 GPIO.setup(servoPin, GPIO.OUT)
 p = GPIO.PWM(servoPin, 50) # 서보모터 설정
 p.start(0)
+p.ChangeDutyCycle(5)
+
+''' 시리얼 통신 세팅 '''
+ARD = serial.Serial(PORT, baudrate)
 
 ''' 아날로그 input 함수 '''
 def analog_read(channel):
@@ -172,47 +179,56 @@ def sync():
    dustConditionFromServer = int(response['dustCondition'])
    mdustConditionFromServer = int(response['mDustCondition'])
 
-   threading.Timer(3, sync).start() # 주기적으로 실행하도록 예약
+   threading.Timer(4, sync).start() # 주기적으로 실행하도록 예약
 
 
 
 ''' 메인실행 '''
-#sync() # 싱크는 딱 한번만 실행
+sync() # 싱크는 딱 한번만 실행
 
 # 계속 실행
 
 try:
    while True:
-      ''' dustFactor 측정'''
-      GPIO.output(ledPower, False) # LED 전원 끄기
-      time.sleep(samplingTime)
+      ''' dustFactor 받아오기 '''
+      if ARD.readable():
+         dustFactor = int(float(ARD.readline().decode()))
 
-      dustFactor = analog_read(0) # read the dust value
+         print("dustFactor: %d" % dustFactor)
+      else:
+         print("dustSensor read error")
 
-      time.sleep(deltaTime)
-      GPIO.output(ledPower, True)
-      time.sleep(sleepTime)
-      print("dustFactor: %f" % dustFactor)
-
-      ''' 창문을 열어야 하는지 판단하기 '''
+      ''' 창문을 닫아야 하는지 판단하기 '''
+      
+         
       if(dustFactor > 500) or (dustDensityFromServer > dustConditionFromServer) or (mDustDensityFromServer > mdustConditionFromServer):
          requiredToClose = True
       else:
          requiredToClose = False
+
+      ''' 명령 강제 실행 '''
+      if windowCommand == 3: #창문 닫기
+         p.ChangeDutyCycle(11.5)
+         time.sleep(10)
+         continue
+      elif windowCommand == 2: # 창문 열기
+         p.ChangeDutyCycle(5)
+         time.sleep(10)
+         continue
       
 
       ''' 창문을 진짜 열까? '''
       if (requiredToClose == True) and (windowIsOpen == True):
          print("창문 닫기")
-         GPIO.setup(servoPin, GPIO.OUT)
-         p.ChangeDutyCycle(5) # -90도
-         GPIO.setup(servoPin, GPIO.IN)
+         #GPIO.setup(servoPin, GPIO.OUT)
+         p.ChangeDutyCycle(11.5) # -90도
+        ## GPIO.setup(servoPin, GPIO.IN)
          windowIsOpen = False
       elif (requiredToClose == False) and (windowIsOpen == False):
          print("창문 열기")
-         GPIO.setup(servoPin, GPIO.OUT)
-         p.ChangeDutyCycle(10) # +90도
-         GPIO.setup(servoPin, GPIO.IN)
+         #GPIO.setup(servoPin, GPIO.OUT)
+         p.ChangeDutyCycle(5) # +90도
+        # GPIO.setup(servoPin, GPIO.IN)
          windowIsOpen = True
 
 
@@ -221,6 +237,7 @@ try:
 
 except KeyboardInterrupt: # If Ctrl + C is pressed, exit cleanly
    print("Keyboard Interrupt")
+   p.stop()
 
 except:
    print("some error")

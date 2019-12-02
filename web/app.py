@@ -41,7 +41,7 @@ def rpiSync(dustFactor, isFirst):
     ''' 라즈베리가 측정한 먼지 척도를 기록 '''
     with codecs.open("rpiDust", "w", "utf-8") as file:
         file.write(dustFactor)
-
+    genLog("미세먼지 센서의 dustFactor가 " + dustFactor + "로 측정되었습니다.")
 
     ''' 라즈베리파이에 먼지 값, 조건 전달 '''
     with open("dustConditionToClose", "r") as file:
@@ -198,7 +198,7 @@ def crawling():
         file.write(str(dust[4].text) + '\n') # 미세먼지
         file.write(str(dust[5].text)) # 초미세먼지
     print("DEBUG: writing success")
-    genLog("날씨 정보를 서버에서 크롤링했습니다.") # 로그 생성
+    #genLog("날씨 정보를 서버에서 크롤링했습니다.") # 로그 생성
     threading.Timer(1800, crawling).start() # 1800초마다 한 번 실행하도록 예약
     return weatherTable, tempTable, dust, rainTable
 

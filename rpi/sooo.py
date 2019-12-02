@@ -84,176 +84,123 @@ For further information, please refer to https://pinout.xyz/
 '''
 
 import RPi.GPIO as GPIO
-import spidev, time
-import serial
+import spidev
 import urllib.request
 import json
 import time
 import socket
 import threading
 
-spi = spidev.SpiDev()
-spi.open(0, 0)
 measurePin = 0 # 측정 핀이 MCP3008에서 CH0
 ledPower = 14 # led 전원공급 핀: GPIO 14
-servoPin = 15 # 서보모터 핀
 
+''' constants from .ino '''
 # samplingTime = 280
 # deltaTime = 40
 # sleepTime = 9680
+''' to python '''
 samplingTime = 0.00028
 deltaTime = 0.00004
 sleepTime = 0.00968
+#voMeasured = 0
+dustFactor = 0 # Dust Factor. 매우 중요!!
+#calcVoltage = 0
 
-voMeasured = 0
-calcVoltage = 0
-dustDensity = 0
 
-dustFactor = 0
+''' 서버 관련 변수들 '''
+isFirst = True # 처음 서버에 연결하는가?
+response = None # 서버 응답 값
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(ledPower, GPIO.OUT)
-GPIO.setup(servoPin, GPIO.OUT)
-GPIO.output(ledPower, False)
+dustDensityFromServer = 0 # 웹서버에서 가져온 미세먼지 값
+mDustDensityFromServer = 0 # 웹서버에서 가져온 초미세먼지 값
+dustConditionFromServer = 10000 # 웹서버에서 가져온 창문 열기 조건값 (미세먼지)
+mdustConditionFromServer = 10000 # 웹서버에서 가져온 창문 열기 조건값 (초미세먼지)
 
+windowIsOpen = True # 창문이 열려있는가?
+requiredToClose = False # 창문을 닫을 필요가 있는가?
+windowCommand = 0 # 창문 명령. 2 : 열기, 3: 닫기
+
+
+''' 아날로그 input 세팅 '''
+spi = spidev.SpiDev()
+spi.open(0, 0)
+
+''' GPIO 핀 모드 세팅 '''
+GPIO.setmode(GPIO.BCM) # BCM GPIO 핀 배열을 사용하도록 지정
+GPIO.setup(ledPower, GPIO.OUT) # 미세먼지 센서의 LED 핀 설정
+
+''' 아날로그 input 함수 '''
 def analog_read(channel):
     r = spi.xfer2([1, (8 + channel) << 4, 0])
     adc_out = ((r[1]&3) << 8) + r[2]
     return adc_out
 
+''' 서버와의 연동 '''
+def sync():
+   ''' 어쩔 수 없다..'''
+   global isFirst
+   global response
+   global dustFactor
 
-def sync(url, dustFactor):
-    ''' 라즈베리파이의 현재 ip 얻기 '''
-    # s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # s.connect(('8.8.8.8', 1))
-    # rpiIp = s.getsockname()[0] # 라즈베리파이의 ip
+   global dustDensityFromServer
+   global mDustDensityFromServer
+   global dustConditionFromServer
+   global mdustConditionFromServer
 
-    #url = url + "/rpi/sync/" + rpiIp + "/" + str(dustFactor)
-    url = url + "/rpi/sync/" + str(dustFactor)
-    print("DEBUG: url: " + url)
-    response = urllib.request.urlopen(url).read().decode('utf-8')
+   url = "https://soooserver.azurewebsites.net/rpi/sync/" + str(dustFactor) + "/" + str(int(isFirst))
+   isFisrt = False
+   print("DEBUG: url: " + url)
+   response = urllib.request.urlopen(url).read().decode('utf-8')
 
-    response = json.loads(response) # 결과를 딕셔너리 타입으로 변환
-    print(response)
-    #print(response)
-    threading.Timer(3, sync, dustFactor).start() # 주기적으로 실행하도록 예약
-    return response
+   response = json.loads(response) # 결과를 딕셔너리 타입으로 변환
+   print()
+   print()
+   print("response: " + str(response))
+   print("싱크 완료")
+   print()
+   print()
+   #print(response)
 
-windowIsOpen = True
-dustFactor = 0
-requiredToClose = False
-command = 0
-url = "http://soooserver.azurewebsites.net"
+   windowCommand = int(response['command'])
+   dustDensityFromServer = int(response['dust'])
+   mDustDensityFromServer = int(response['mdust'])
+   dustConditionFromServer = int(response['dustCondition'])
+   mdustConditionFromServer = int(response['mDustCondition'])
 
-p = GPIO.PWM(servoPin, 50)
-p.start(0)
-response = sync(url, dustFactor)
+   threading.Timer(3, sync).start() # 주기적으로 실행하도록 예약
+
+
+
+''' 메인실행 '''
+sync() # 싱크는 딱 한번만 실행
 
 # 계속 실행
 while True:
-    #time.sleep(3) # 3초간 쉬기
-    time.sleep(1)
+   ''' dustFactor 측정'''
+   GPIO.output(ledPower, False) # LED 전원 끄기
+   time.sleep(samplingTime)
 
-    GPIO.output(ledPower, False) # LED 전원 끄기
-    time.sleep(samplingTime)
+   dustFactor = analog_read(0) # read the dust value
 
-    voMeasured = analog_read(measurePin) # read the dust value
-    dustFactor = voMeasured
-    print(dustFactor)
-    time.sleep(deltaTime)
-    GPIO.output(ledPower, True)
-    time.sleep(sleepTime)
-    #calcVoltage = voMeasured * (3.3 / 1024)
-    #dustDensity = (0.17 * calcVoltage - 0.1) * 1000
-    #print(voMeasured)
-    #print("Reading = %f\tVoltage = %f\tdustFactor = %f" % (voMeasured, calcVoltage, dustFactor))
-    # 서버와 sync
+   time.sleep(deltaTime)
+   GPIO.output(ledPower, True)
+   time.sleep(sleepTime)
+   print("dustFactor: %f" % dustFactor)
 
-    print(response)
+   ''' 창문을 열어야 하는지 판단하기 '''
+   if(dustFactor > 500) or (dustDensityFromServer > dustConditionFromServer) or (mDustDensityFromServer > mdustConditionFromServer):
+      requiredToClose = True
+   else:
+      requiredToClose = False
+   
 
-    '''창문을 열어야 하는지 판단 '''
-    dustDensityFromServer = int(response['dust'][:-3])
-    mDustDensityFromServer = int(response['mdust'][:-3])
+   ''' 창문을 진짜 열까? '''
+   if (requiredToClose == True) and (windowIsOpen == True):
+      print("창문 닫기")
+      windowIsOpen = False
+   elif (requiredToClose == False) and (windowIsOpen == False):
+      print("창문 열기")
+      windowIsOpen = True
 
-
-    if (dustFactor > 500) or (dustDensityFromServer > 100) or (mDustDensityFromServer > 35):
-        requiredToClose = True
-    else:
-        requiredToClose = False
-
-
-    if requiredToClose == True:
-        # if windowIsOpen == True: # 창문이 열려있을 때
-        GPIO.setup(servoPin, GPIO.OUT)
-        p.ChangeDutyCycle(7.5)
-        GPIO.setup(servoPin, GPIO.IN)
-        print("모터 구동")
-        windowIsOpen = False # 창문이 닫혔다고 설정
-    else:
-        # if windowIsOpen == False: # 창문이 닫혀있을 떄
-        GPIO.setup(servoPin, GPIO.OUT)
-        p.ChangeDutyCycle(2.5)
-        GPIO.setup(servoPin, GPIO.IN)
-        windowIsOpen = True # 창문이 열려있다고 설정
-    time.sleep(0.5)
-
-    print("DEBUG: checking 'requiredToOpen'")
-    print("DEBUG: requiredToOpen: %d" % requiredToClose)
-
-
-
-# def sendInfo(url, dataType, success, dustValue):
-#     global requiredToOpen
-#     print("DEBUG: sendInfo(%d, %d, %d)" % (dataType, success, dustValue))
-#     url = url + "/inputFromRPi/" + str(dataType) + "/" + str(success) + "/" + str(dustValue) + "/100"
-#     response = urllib.request.urlopen(url).read().decode('utf-8')
-#     #threading.Timer(30, sendInfo).start() # 주기적으로 실행하도록 예약
-
-#     #requiredToOpen = int(response) # 창문을 열어야 하는지 업데이트
-#     print("requiredToOpen: %d" % requiredToOpen)
-
-# def request(url):
-#     global requiredToOpen
-#     global command
-#     print("DEBUG: request()")
-#     url = "http://127.0.0.1:5000/requestFromRPi"
-#     response = urllib.request.urlopen(url).read().decode('utf-8')
-#     threading.Timer(3, request).start()
-
-#     response = json.loads(response)
-#     requiredToOpen = response['requiredToOpen']
-#     command = response['command']
-#     weather = response['weatherInfo']
-
-
-    # print()
-    # print()
-    # print("DEBUG: requiredToOpen: %d" % requiredToOpen)
-    # print("DEBUG: command: %d" % command)
-    # print("DEBUG: 날씨: %s" % weather)
-    # # print("DEBUG: 날씨: %s" % weather['weatherTable'])
-    # # print("DEBUG: 현재 온도: %d" % weather['tempTable'])
-    # # print("DEBUG: 미세먼지: %d" % weather['dust'])
-    # # print("DEBUG: 초미세먼지: %d" % weather['mdust'])
-
-    # print()
-    # print()
-    # print()
-
-
-    
-
-    
-
-
-# 서버에서 주기적으로 값을 받아오는 스케쥴러 실행
-#    dataType
-#    0: 모터 상태, 미세먼지 측정값 전송 (주기적인 로그 전송)
-#    1: 모터 작동여부 전송
-#    2: command(재부팅, 종료 등) 성공여부 전송
-# print("DEBUG: sendInfo(0, 1, dustValue)")
-# #sendInfo(0, 1, dustValue)
-# request(
-
-
-        # threading.Timer(3, request).start()
+   print("현재 상태: 창문을 닫아야 하나: %d 창문이 열려있나: %d" % (int(requiredToClose), int(windowIsOpen)))
+   time.sleep(1)

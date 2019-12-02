@@ -48,11 +48,22 @@ def rpiSync(dustFactor, isFirst):
                 dustCondition = (file.readline())[:-1]
                 mDustCondition = file.readline()
 
-    with open("windowCommand", "w+") as file: # 읽기 & 쓰기 모드. 내용을 완전히 지우고 새로 씀.
+
+    ''' command를 얻고 windowCommand를 초기화 '''
+    with open("windowCommand", "r") as file: # 읽기 & 쓰기 모드. 내용을 완전히 지우고 새로 씀.
         commandContext = file.read()
+    with open("windowCommand", "w") as file:
         file.write("0")
 
-    return str(getWeather() + "hello" + dustCondition + "hello2" + mDustCondition + "hello3" + commandContext)
+    ''' 날씨 정보 얻기 '''
+    weatherContext = getWeather()
+    print(weatherContext)
+    dustValue = (weatherContext['dust'])[:-3]
+    mdustValue = (weatherContext['mdust'])[:-3]
+
+    ''' 반환할 데이터 생성 '''
+    returnData = {'dust': dustValue, 'mdust': mdustValue, 'dustCondition': dustCondition, 'mDustCondition': mDustCondition, 'command': commandContext}
+    return jsonify(returnData)
 
 
 
@@ -136,8 +147,9 @@ def requestWeather():
 ''' 서버에 저장된 날씨 정보를 반환하는 함수 '''
 def getWeather():
     with codecs.open("weatherData", "r", 'utf-8') as file:
-        data = {'weatherTable': (file.readline())[:-1], 'tempTable': (file.readline())[:-1], 'dust': (file.readline())[:-1], 'mdust': (file.readline())[:-1]}
-        return jsonify(data)
+        data = {'weatherTable': (file.readline())[:-1], 'tempTable': (file.readline())[:-1], 'dust': (file.readline())[:-1], 'mdust': (file.readline())}
+    print(data)
+    return data
 
 ''' 현재 시간을 반환하는 함수 '''
 def nowDate():

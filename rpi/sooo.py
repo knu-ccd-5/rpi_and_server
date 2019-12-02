@@ -154,13 +154,14 @@ def sync():
    global response
    global dustFactor
 
+   global windowCommand
    global dustDensityFromServer
    global mDustDensityFromServer
    global dustConditionFromServer
    global mdustConditionFromServer
 
    url = "https://soooserver.azurewebsites.net/rpi/sync/" + str(dustFactor) + "/" + str(int(isFirst))
-   isFisrt = False
+   isFirst = False
    print("DEBUG: url: " + url)
    response = urllib.request.urlopen(url).read().decode('utf-8')
 
@@ -179,7 +180,7 @@ def sync():
    dustConditionFromServer = int(response['dustCondition'])
    mdustConditionFromServer = int(response['mDustCondition'])
 
-   threading.Timer(4, sync).start() # 주기적으로 실행하도록 예약
+   threading.Timer(5, sync).start() # 주기적으로 실행하도록 예약
 
 
 
